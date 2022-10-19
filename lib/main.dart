@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:search_user_repository/search_user_repository.dart';
 
 import 'bloc/search_bloc.dart';
 
@@ -12,22 +13,27 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => SearchBloc(),
-          ),
-        ],
-        child: MaterialApp(
-          theme: ThemeData(
-            textTheme: const TextTheme(
-                bodyText2: TextStyle(fontSize: 33),
-                subtitle1: TextStyle(fontSize: 22)),
-          ),
-          home: const Scaffold(
-            body: SafeArea(child: MyHomePage()),
-          ),
-        ));
+    return RepositoryProvider(
+      create: (context) => SearchUserRepository(),
+      child: MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (context) => SearchBloc(
+                  searchUserRepository:
+                      RepositoryProvider.of<SearchUserRepository>(context)),
+            ),
+          ],
+          child: MaterialApp(
+            theme: ThemeData(
+              textTheme: const TextTheme(
+                  bodyText2: TextStyle(fontSize: 33),
+                  subtitle1: TextStyle(fontSize: 22)),
+            ),
+            home: const Scaffold(
+              body: SafeArea(child: MyHomePage()),
+            ),
+          )),
+    );
   }
 }
 
@@ -58,14 +64,61 @@ class MyHomePage extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               itemBuilder: (context, index) {
+                final user = users[index];
                 return ListTile(
-                  title: Text(users[index]['username'].toString()),
+                  title: Text(user.username ?? ''),
+                  leading: Hero(
+                    tag: user.username ?? '',
+                    child: CircleAvatar(
+                        backgroundImage: NetworkImage(user.images ?? '')),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => UserInfoScreen(
+                          user: user,
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
               itemCount: users.length,
             ),
           ),
       ],
+    );
+  }
+}
+
+class UserInfoScreen extends StatelessWidget {
+  const UserInfoScreen({Key? key, required this.user}) : super(key: key);
+
+  final UserModel user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          user.username ?? '',
+          style: TextStyle(fontSize: 22),
+        ),
+      ),
+      body: Column(children: [
+        Hero(
+            tag: user.username ?? '',
+            child: Container(
+              width: double.infinity,
+              height: 300,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  fit: BoxFit.cover,
+                  image: NetworkImage(user.images ?? ''),
+                ),
+              ),
+            )),
+      ]),
     );
   }
 }

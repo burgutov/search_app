@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:dio/dio.dart';
 import 'package:meta/meta.dart';
+import 'package:search_user_repository/search_user_repository.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 part 'search_event.dart';
@@ -16,19 +17,22 @@ EventTransformer<E> debounceDroppable<E>(Duration duration) {
 }
 
 class SearchBloc extends Bloc<SearchEvent, SearchState> {
-  SearchBloc() : super(SearchState()) {
+  SearchBloc({required SearchUserRepository searchUserRepository})
+      : _searchUserRepository = searchUserRepository,
+        super(SearchState()) {
     on<SearchUserEvent>(_onSearch,
-        transformer: debounceDroppable(Duration(milliseconds: 300)));
+        transformer: debounceDroppable(Duration(milliseconds: 500)));
   }
 
   final _httpClient = Dio();
 
-  _onSearch(SearchUserEvent event, Emitter<SearchState> emet) async {
-    if (event.query.length < 3) return;
-    final res = await _httpClient.get(apiUrl, queryParameters: {
-      'q': event.query,
-    });
+  late final SearchUserRepository _searchUserRepository;
 
-    emit(SearchState(users: res.data['data']));
+  _onSearch(SearchUserEvent event, Emitter<SearchState> emet) async {
+    if (event.query.isEmpty) return emit(SearchState(users: []));
+    if (event.query.length < 3) return;
+    final users = await _searchUserRepository.onSearch(event.query);
+
+    emit(SearchState(users: users));
   }
 }
